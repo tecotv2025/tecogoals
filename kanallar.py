@@ -21,9 +21,15 @@ kanallar = {
 }
 
 def get_final_url_selenium(url):
+    """Selenium ile kısa URL’nin yönlendirdiği son adresi bulur"""
     options = Options()
     options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
+    options.add_argument('--remote-debugging-port=9222')
+    options.add_argument(f'--user-data-dir=/tmp/chrome-profile-{os.getpid()}')
+
     driver = webdriver.Chrome(options=options)
     try:
         driver.get(url)
@@ -34,16 +40,18 @@ def get_final_url_selenium(url):
     return final_url
 
 def get_final_url_requests(url):
+    """Requests ile yönlendirmeleri takip ederek son URL’yi bulur"""
     try:
-        response = requests.get(url, allow_redirects=True)
+        response = requests.get(url, allow_redirects=True, timeout=10)
         return response.url
     except requests.RequestException as e:
         print(f"Yönlendirme hatası: {e}")
         return None
 
 def find_baseurl(page_url):
+    """Sayfadan baseurl bilgisini çeker"""
     try:
-        response = requests.get(page_url)
+        response = requests.get(page_url, timeout=10)
         response.raise_for_status()
         match = re.search(r'const\s+baseurl\s*=\s*"([^"]+)"', response.text)
         if match:
@@ -54,6 +62,7 @@ def find_baseurl(page_url):
         return None
 
 def create_php_files(base_url):
+    """Base URL ile tüm yayınlar için PHP yönlendirme dosyaları oluşturur"""
     os.makedirs("php_kanallar", exist_ok=True)
     for num, dosya in kanallar.items():
         stream_url = base_url + dosya
