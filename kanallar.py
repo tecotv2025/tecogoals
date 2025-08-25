@@ -4,6 +4,8 @@ import time
 import re
 import requests
 import os
+import tempfile
+import shutil
 
 # Yayın dosyaları
 kanallar = {
@@ -28,7 +30,10 @@ def get_final_url_selenium(url):
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
     options.add_argument('--remote-debugging-port=9222')
-    options.add_argument(f'--user-data-dir=/tmp/chrome-profile-{os.getpid()}')
+
+    # Benzersiz geçici Chrome profili
+    tmp_profile = tempfile.mkdtemp()
+    options.add_argument(f'--user-data-dir={tmp_profile}')
 
     driver = webdriver.Chrome(options=options)
     try:
@@ -37,6 +42,7 @@ def get_final_url_selenium(url):
         final_url = driver.current_url
     finally:
         driver.quit()
+        shutil.rmtree(tmp_profile, ignore_errors=True)  # profil klasörünü sil
     return final_url
 
 def get_final_url_requests(url):
