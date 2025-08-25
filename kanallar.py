@@ -25,23 +25,28 @@ kanallar = {
 def get_final_url_selenium(url):
     """Selenium ile kısa URL’nin yönlendirdiği son adresi bulur"""
     options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--remote-debugging-port=9222')
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--remote-debugging-port=0")  # rastgele port
 
     # Benzersiz geçici Chrome profili
     tmp_profile = tempfile.mkdtemp()
-    options.add_argument(f'--user-data-dir={tmp_profile}')
+    options.add_argument(f"--user-data-dir={tmp_profile}")
 
-    driver = webdriver.Chrome(options=options)
+    driver = None
     try:
+        driver = webdriver.Chrome(options=options)
         driver.get(url)
         time.sleep(5)
         final_url = driver.current_url
+    except Exception as e:
+        print(f"Selenium hatası: {e}")
+        final_url = None
     finally:
-        driver.quit()
+        if driver:
+            driver.quit()
         shutil.rmtree(tmp_profile, ignore_errors=True)  # profil klasörünü sil
     return final_url
 
@@ -87,23 +92,26 @@ if __name__ == "__main__":
     site_url = get_final_url_selenium(short_url)
     print("Site ana adresi:", site_url)
 
-    channel_path = "channel.html?id=yayinzirve"
-    if not site_url.endswith('/'):
-        site_url += '/'
-    full_url = site_url + channel_path
-    print("Tam URL:", full_url)
+    if site_url:
+        channel_path = "channel.html?id=yayinzirve"
+        if not site_url.endswith('/'):
+            site_url += '/'
+        full_url = site_url + channel_path
+        print("Tam URL:", full_url)
 
-    print("Son kanal URL'si bulunuyor...")
-    final_channel_url = get_final_url_requests(full_url)
-    print("Son kanal URL'si:", final_channel_url)
+        print("Son kanal URL'si bulunuyor...")
+        final_channel_url = get_final_url_requests(full_url)
+        print("Son kanal URL'si:", final_channel_url)
 
-    if final_channel_url:
-        base_url = find_baseurl(final_channel_url)
-        if base_url:
-            print("Base URL bulundu:", base_url)
-            print("PHP yönlendirme dosyaları oluşturuluyor...")
-            create_php_files(base_url)
+        if final_channel_url:
+            base_url = find_baseurl(final_channel_url)
+            if base_url:
+                print("Base URL bulundu:", base_url)
+                print("PHP yönlendirme dosyaları oluşturuluyor...")
+                create_php_files(base_url)
+            else:
+                print("Base URL bulunamadı.")
         else:
-            print("Base URL bulunamadı.")
+            print("Kanal URL'si bulunamadı.")
     else:
-        print("Kanal URL'si bulunamadı.")
+        print("Selenium ile site URL’si alınamadı.")
